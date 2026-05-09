@@ -237,4 +237,4 @@ if __name__ == "__main__":
                 comp_imgs = masked_imgs + gen_imgs * masks
                 utils.save_image(comp_imgs[:4], os.path.join(output_dir, f"res_{epoch}_{i}.png"), normalize=True)
                 visualize(real_imgs, masked_imgs, comp_imgs, epoch, i, output_dir, num=4)
-                print(f"PSNR: {psnr_val:.2f} dB, SSIM: {ssim_val:.4f}")
+                logging.info(f"PSNR: {psnr_val:.2f} dB, SSIM: {ssim_val:.4f}")
