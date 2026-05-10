@@ -1,79 +1,54 @@
-# 🎨 图像修复生成对抗网络 (Image Inpainting GAN)
+# 图像修复生成对抗网络 (Image Inpainting GAN)
 
-本项目是一个基于 PyTorch 实现的深度学习图像修复（Image Inpainting）模型。它采用生成对抗网络（GAN）架构，能够自动识别并修复图像中被随机遮挡的区域。项目中集成了训练日志记录、实时可视化以及图像质量评估（PSNR 和 SSIM）。
+本项目是一个基于 PyTorch 构建的生成对抗网络 (GAN)，主要用于图像修复（Image Inpainting）任务。模型会随机遮挡输入图像的一部分，并训练生成器（Generator）来预测和填补缺失的像素，同时使用判别器（Discriminator）来提升生成内容的真实度。
 
----
+## 核心特性
 
-## 📌 项目简介
+*   **生成器 (Generator)**: 采用经典的编码器-解码器 (Encoder-Decoder) 架构。包含 4 层下采样卷积和 4 层上采样转置卷积，使用 LeakyReLU 和 ReLU 激活函数，输出层使用 Tanh。
+*   **判别器 (Discriminator)**: 采用类似 PatchGAN 的架构，包含多层卷积，输出经过 Sigmoid 激活函数，用于评估图像局部的真实性（0 到 1 之间）。
+*   **损失函数设计**: 结合了对抗损失 (BCE Loss) 和重建损失 (L1 Loss)。总损失计算方式为：判别真伪的 BCE Loss 加上放大 50 倍的遮挡区域 L1 重建损失，以确保细节的恢复。
+*   **实时评估指标**: 训练过程中集成 `torchmetrics`，实时计算 PSNR (峰值信噪比) 和 SSIM (结构相似性)。
+*   **可视化与日志**: 自动将训练进度输出到控制台并保存至 `traning.log`，定期保存生成的可视化对比图（包含真实图像、遮挡图像和修复结果）。
 
-模型的主要工作流程如下：
-1. **数据预处理**：将图像缩放至 `128x128` 像素并进行归一化。
-2. **生成遮挡**：在输入图像上随机生成一个正方形的纯黑色遮挡块（大小为原图边长的四分之一）。
-3. **生成器修复**：生成器接收带遮挡的图像，并通过编码器-解码器结构输出修复后的完整图像。
-4. **判别器对抗**：PatchGAN 风格的判别器对真实图像和生成的修复图像进行二元分类判别。
-5. **计算损失与评估**：结合 BCE 损失和 L1 损失优化网络，并实时计算 PSNR（峰值信噪比）和 SSIM（结构相似性）。
+## 环境依赖
 
----
+在运行代码之前，请确保安装了以下 Python 库：
 
-## 🛠️ 环境依赖
 
-在运行项目之前，请确保您的 Python 环境中安装了以下依赖库：
+pip install torch torchvision numpy Pillow matplotlib torchmetrics
+数据集准备
+代码默认使用 img_align_celeba 数据集（例如 CelebA），并期望指定目录下包含 .jpg 格式的图像文件。
 
-pip install torch torchvision torchmetrics numpy pillow matplotlib
-📂 数据集准备
-本项目默认使用 CelebA 人脸数据集。请确保您的图片以 .jpg 格式直接存放在指定文件夹中。
+准备你的图像数据集（仅需图片文件，无需标签）。
 
-您需要在主程序中修改 img_dir 变量，将其指向您的服务器或本地机器的数据集路径：
-🧠 核心架构说明
-1. 生成器 (Generator)
-网络结构：基于全卷积的编码器-解码器 (Encoder-Decoder) 架构。
-
-特征编码 (Downsampling)：包含 4 层卷积块（Conv2d -> BatchNorm2d -> LeakyReLU），将 3 通道的 RGB 图像逐步提取为 512 通道的高维特征。
-
-图像重建 (Upsampling)：包含 4 层反卷积块（ConvTranspose2d -> BatchNorm2d -> ReLU/Tanh），逐步还原图像空间分辨率，最终输出 128x128x3 的高质量修复图像。
-
-2. 判别器 (Discriminator)
-网络结构：采用 PatchGAN 风格的局部判别网络，旨在保留图像的高频细节。
-
-层级设计：包含 5 层卷积网络。最后一层通过 Sigmoid 激活函数将输出张量映射至 [0, 1] 区间，用于评估局部图像块的真伪。
-
-3. 损失函数 (Loss Functions)
-对抗损失 (BCE Loss)：计算生成器欺骗判别器的能力，推动生成图像逼近真实分布。
-
-重建损失 (L1 Loss)：专注遮挡区域的像素级差异。权重系数设为 50，强制要求修复区域在结构和色彩上与原图保持高度一致。
-
-🚀 训练与运行
-配置好环境和数据集路径后，直接运行主脚本即可启动训练（代码会自动检测并调用 GPU 资源）：
+打开主程序文件，将 __main__ 中的 img_dir 变量修改为你本地数据集的绝对路径。
+运行训练
+直接运行 Python 脚本即可开始训练流程：
 
 Bash
 python main.py
-核心超参数配置：
+训练参数概览
+Image Size: 128 x 128
 
-Batch Size: 64 （若显存不足，请适当调小，例如设为 32 或 16）
+Mask Size: 32 x 32 (随机位置)
 
-Epochs: 100 （总迭代轮次）
+Batch Size: 64
 
-学习率 (Learning Rate):
+Epochs: 100
 
-生成器 (Adam): 0.00005
+Optimizer: Adam
 
-判别器 (Adam): 0.0002
+Learning Rate: Generator (5e-5), Discriminator (2e-4)
 
-📊 输出结果与日志
-训练启动后，程序会在当前运行目录下自动生成并实时更新以下内容：
+Betas: (0.5, 0.999)
 
-📝 训练日志 (traning.log)
+产出与结果记录
+运行代码后，会在当前目录下生成以下内容：
 
-详细记录带有时间戳的训练进程，包含当前 Epoch、Batch、G Loss、D Loss，以及 PSNR 和 SSIM 的定量评估指标。控制台与日志文件会同步输出。
+traning.log: 记录训练日志，包含 Epoch、Batch、G_loss、D_loss 以及 PSNR 和 SSIM 的指标变化。
 
-🖼️ 图像可视化 (res_img/ 目录)
+res_img/ (文件夹): 存放训练过程中的可视化结果。
 
-每隔 10 个 Batch 自动保存一次中间结果。
+res_{epoch}_{batch}.png: 拼接后的修复图像直接输出。
 
-修复结果图 (res_{epoch}_{batch}.png)：直接展示拼接后的最终修复效果（原图未遮挡区域 + 生成的修复区域）。
-
-对比效果图 (vis_epoch{epoch}_batch{batch}.png)：自动生成三排对比矩阵图表，自上而下分别展示：真实图像 (Real)、带遮挡图像 (Masked) 和修复后图像 (Fixed)，方便直观分析网络的收敛效果。
-💡 注意事项
-异常拦截：数据加载器（Dataloader）中内置了 try-except 异常处理逻辑。若遇到损坏的图像文件，会自动记录 Error 日志并重试读取，确保长时间训练不会因为个别文件损坏而意外中断。
-
-环境建议：鉴于图像生成任务的计算量，强烈推荐在配备独立显卡的计算环境下运行。纯 CPU 训练耗时极长，仅建议用于早期的代码调试。
+vis_epoch{epoch}_batch{batch}.png: 使用 Matplotlib 绘制的对比图（包含 Real、Masked、Fixed 三种状态），直观展示修复效果。系统每隔 10 个 Batch 保存一次。
