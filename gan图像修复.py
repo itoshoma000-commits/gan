@@ -225,7 +225,7 @@ if __name__ == "__main__":
 
 
             #初始化指标
-            psnr_metric = PeakSignalNoiseRatio().to(device)
+            psnr_metric = PeakSignalNoiseRatio(data_range=255.0).to(device)
             ssim_metric = StructuralSimilarityIndexMeasure().to(device)
             #PSNR SSIM
             psnr_val = psnr_metric(gen_imgs, real_imgs)
